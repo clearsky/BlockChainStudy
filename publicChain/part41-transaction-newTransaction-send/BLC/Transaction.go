@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/gob"
+	"encoding/hex"
 	"log"
 )
 
@@ -17,6 +18,10 @@ type Transaction struct {
 	Vouts []*TXOutput
 }
 
+// 判断当前的交易是否是Coinbase交易
+func (trasaction *Transaction) IsCoinbaseTransaction() bool{
+	return len(trasaction.Vins[0].TxHash) == 0 && trasaction.Vins[0].Vout == -1
+}
 
 // 1. Transactino创建
 	// 1. 创世区块创建时的Transactino
@@ -56,29 +61,48 @@ type Transaction struct {
 
 		tx.TxHash = hash[:]
 	}
+
+
+
 	// 2. 转账时产生的Transaction
-func NewSimpleTransaction(from string, to string, amount int) *Transaction{
+func NewSimpleTransaction(from string, to string, amount int64, blockchain *Blockchain) *Transaction{
+
+	//UTXOs := blockchain.GetUTXOs(from)
+	money, spendableUTXOs := blockchain.FindSpendableUTXOs(from , amount)
+
+	// 1. 函数，返回from这个人所有的未花费交易输出所对应的Transaction
+
+
+	// 通过一个函数，返回未花费的余额
+
 	var txInputs []*TXInput
 	var txOutputs []*TXOutput
 
 	// 消费
-	txInput := &TXInput{
-		TxHash: []byte{},
-		Vout: -1,
-		ScriptSig: "Gensis Data...",
+		// 消费hash缺失
+	for txHash, indexArray := range spendableUTXOs{
+		for _, index := range indexArray{
+			txHashBytes, _ := hex.DecodeString(txHash)
+			txInput := &TXInput{
+				TxHash: txHashBytes,
+				Vout: index,
+				ScriptSig: from,
+			}
+			txInputs = append(txInputs, txInput)
+		}
 	}
-	txInputs = append(txInputs, txInput)
+
 
 	// 转账
 	txOutput := &TXOutput{
-		Value:10,
+		Value:int64(amount),
 		ScriptPubKey: to,
 	}
 	txOutputs = append(txOutputs, txOutput)
 
 	// 找零
 	txOutput = &TXOutput{
-		Value:nil,
+		Value:money - amount,
 		ScriptPubKey:from,
 	}
 	txOutputs = append(txOutputs, txOutput)

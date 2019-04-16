@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/gob"
+	"fmt"
 	"log"
 )
 
@@ -17,6 +18,10 @@ type Transaction struct {
 	Vouts []*TXOutput
 }
 
+// 判断当前的交易是否是Coinbase交易
+func (trasaction *Transaction) IsCoinbaseTransaction() bool{
+	return len(trasaction.Vins[0].TxHash) == 0 && trasaction.Vins[0].Vout == -1
+}
 
 // 1. Transactino创建
 	// 1. 创世区块创建时的Transactino
@@ -56,12 +61,26 @@ type Transaction struct {
 
 		tx.TxHash = hash[:]
 	}
+
+
+
 	// 2. 转账时产生的Transaction
 func NewSimpleTransaction(from string, to string, amount int) *Transaction{
+
+	unSpentTx := (from)
+	fmt.Println(unSpentTx)
+	//money, dic :=
+
+	// 1. 函数，返回from这个人所有的未花费交易输出所对应的Transaction
+
+
+	// 通过一个函数，返回未花费的余额
+
 	var txInputs []*TXInput
 	var txOutputs []*TXOutput
 
 	// 消费
+		// 消费hash缺失
 	txInput := &TXInput{
 		TxHash: []byte{},
 		Vout: -1,
@@ -78,7 +97,7 @@ func NewSimpleTransaction(from string, to string, amount int) *Transaction{
 
 	// 找零
 	txOutput = &TXOutput{
-		Value:nil,
+		Value:6,
 		ScriptPubKey:from,
 	}
 	txOutputs = append(txOutputs, txOutput)
@@ -90,5 +109,5 @@ func NewSimpleTransaction(from string, to string, amount int) *Transaction{
 	}
 	tx.SetHashTransaction()
 
-	return tx
+	return nil
 }

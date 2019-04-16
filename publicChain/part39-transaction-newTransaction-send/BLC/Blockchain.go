@@ -1,6 +1,8 @@
 package BLC
 
 import (
+	"bytes"
+	"encoding/hex"
 	"fmt"
 	"github.com/boltdb/bolt"
 	"log"
@@ -19,6 +21,69 @@ type Blockchain struct {
 	DB *bolt.DB
 }
 
+// 如果一个地址对应的TxOutput未花费， 那么这个Transaction就应该添加到数组中返回
+func (blockchain *Blockchain) GetUTXOs(address string) []*UTXO{
+	blockchainIterator := blockchain.Iterator()
+	var spentTXOutputs map[string][]int
+	var end [32]byte
+	var UTXOs []*UTXO
+
+	for {
+		block := blockchainIterator.Next()
+
+		for _, tx := range block.Txs{
+			fmt.Println(tx)
+			// Vins
+			// 遍历一个Transaction的指定地址输入，将Transaction的hash和输入的输出索引存入字典
+			if !tx.IsCoinbaseTransaction() {
+				for _, in := range tx.Vins{
+					// 是否能够解锁
+					if in.UnlockScriptSigWithAddress(address){  // 如果是当前地址名下的消费
+						key := hex.EncodeToString(tx.TxHash)
+						spentTXOutputs[key] = append(spentTXOutputs[key], in.Vout)
+					}
+				}
+			}
+
+			// Vouts
+			// 在同一个Transaction中，遍历输出，如果存在与输入的输出索引对应的输出，则代表花费，否则代表未花费，如果
+			// 输入列表为空，也代表未花费
+			for index, out := range tx.Vouts{
+				if out.UnlockScriptPubKeyWithAddress(address){
+					if len(spentTXOutputs) != 0{
+						for txHash, indexArray := range spentTXOutputs{
+							for _, i := range indexArray{   // 如果存在花费
+								if index == i && txHash == hex.EncodeToString(tx.TxHash){  // 如果花费和输出能够对应，则代表花费，不进行操作
+									continue
+								}else{  // 否则代表未花费
+									utxo := &UTXO{
+										TXHash: tx.TxHash,
+										Index:index,
+										Output:out,
+									}
+									UTXOs = append(UTXOs, utxo)
+								}
+							}
+						}
+					}else{
+						utxo := &UTXO{
+							TXHash: tx.TxHash,
+							Index:index,
+							Output:out,
+						}
+						UTXOs = append(UTXOs, utxo)
+					}
+				}
+			}
+		}
+
+		if bytes.Equal(block.PrevBlockHash, end[:]){  // 遍历到创世区块，退出循环
+			break
+		}
+	}
+	return UTXOs
+}
+
 func (blockchain *Blockchain) Iterator() *BlockchainIterator{
 	return &BlockchainIterator{
 		CurrentHash: blockchain.Tip,
@@ -26,33 +91,6 @@ func (blockchain *Blockchain) Iterator() *BlockchainIterator{
 	}
 }
 
-// 遍历输出所有区块的信息
-//func (blc *Blockchain) PrintChain(){
-//
-//	var block *Block
-//	var currenHash []byte = blc.Tip
-//	var end [32]byte
-//	err := blc.DB.View(func(tx *bolt.Tx) error {
-//		b := tx.Bucket([]byte(blockTableName))
-//		if b != nil{
-//			for {
-//				// 获取当前区块的字节数组
-//				blockBytes := b.Get(currenHash)
-//				block = DeserializeBlock(blockBytes)
-//				block.PrintInfo()
-//				if bytes.Equal(block.PrevBlockHash, end[:]){
-//					break
-//				}
-//				currenHash = block.PrevBlockHash
-//			}
-//		}
-//
-//		return nil
-//	})
-//	if err != nil{
-//		log.Panic(err)
-//	}
-//}
 func (blc *Blockchain) Printchain(){
 	blockchainIterator := blc.Iterator()
 	var block *Block
@@ -110,6 +148,7 @@ func CreateBlockchainWithGenesisBlock(address string) *Blockchain{
 	//如果blcokTable存在
 	if blockChainExists(db){
 		fmt.Println("创世区块已存在...")
+		os.Exit(1)
 	}else{
 		fmt.Println("正在创建创世区块...")
 		// 如果blockTable不存在
@@ -176,7 +215,6 @@ func (blc *Blockchain) AddBlockToBlockchain(txs []*Transaction){
 	}
 	fmt.Println("新的区块添加成功...")
 }
-
 
 // 返回BlockChain对象
 func GetBlockChainObject() *Blockchain{
@@ -250,4 +288,14 @@ func (blockchain *Blockchain) MineNewBlock(from []string, to []string, amount []
 		log.Panic(err)
 	}
 
+}
+
+// 查询余额
+func (blockchain *Blockchain) GetBalance(address string) int64{
+	utxos := blockchain.GetUTXOs(address)
+	var amount int64
+	for _, utxo := range utxos{
+		amount = amount + utxo.Output.Value
+	}
+	return amount
 }

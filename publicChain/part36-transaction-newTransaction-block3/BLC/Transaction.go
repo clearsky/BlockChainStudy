@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/gob"
+	"fmt"
 	"log"
 )
 
@@ -56,12 +57,30 @@ type Transaction struct {
 
 		tx.TxHash = hash[:]
 	}
+
+
+// 如果一个地址对应的TxOutput未花费， 那么这个Transaction就应该添加到数组中返回
+func unSpentTransactionsWithAddress(address string) []*Transaction{
+	return nil
+}
+
 	// 2. 转账时产生的Transaction
 func NewSimpleTransaction(from string, to string, amount int) *Transaction{
+
+	unSpentTx := unSpentTransactionsWithAddress(from)
+	fmt.Println(unSpentTx)
+	//money, dic :=
+
+	// 1. 函数，返回from这个人所有的未花费交易输出所对应的Transaction
+
+
+	// 通过一个函数，返回未花费的余额
+
 	var txInputs []*TXInput
 	var txOutputs []*TXOutput
 
 	// 消费
+		// 消费hash缺失
 	txInput := &TXInput{
 		TxHash: []byte{},
 		Vout: -1,
@@ -78,7 +97,7 @@ func NewSimpleTransaction(from string, to string, amount int) *Transaction{
 
 	// 找零
 	txOutput = &TXOutput{
-		Value:nil,
+		Value:6,
 		ScriptPubKey:from,
 	}
 	txOutputs = append(txOutputs, txOutput)

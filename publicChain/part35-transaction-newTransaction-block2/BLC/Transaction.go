@@ -62,6 +62,7 @@ func NewSimpleTransaction(from string, to string, amount int) *Transaction{
 	var txOutputs []*TXOutput
 
 	// 消费
+		// 消费hash缺失
 	txInput := &TXInput{
 		TxHash: []byte{},
 		Vout: -1,
