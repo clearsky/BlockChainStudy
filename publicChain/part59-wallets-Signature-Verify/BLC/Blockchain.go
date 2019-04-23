@@ -330,8 +330,9 @@ func (blockchain *Blockchain) MineNewBlock(from []string, to []string, amount []
 
 	// 在建立新区块之前，对TXs进行签名验证
 	for _, tx := range txs{
-		if !tx.Verify(){
-			log.Panic("签名验证失败...")
+		if blockchain.VerifyTransaction(tx) != true{
+			fmt.Println("签名验证失败...")
+			os.Exit(1)
 		}
 	}
 

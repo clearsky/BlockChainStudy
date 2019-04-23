@@ -24,7 +24,7 @@ type Transaction struct {
 
 // 判断当前的交易是否是Coinbase交易
 func (trasaction *Transaction) IsCoinbaseTransaction() bool{
-	return len(trasaction.Vins[0].TxHash) == 0 && trasaction.Vins[0].Vout == -1
+	return (len(trasaction.Vins[0].TxHash) == 0) && (trasaction.Vins[0].Vout == -1)
 }
 
 // 1. Transactino创建
@@ -222,7 +222,7 @@ func (tx *Transaction) Verify(txMap map[string]Transaction) bool{
 		s := big.Int{}
 		sigLen := len(vin.Signature)
 		r.SetBytes(vin.Signature[:(sigLen/2)])
-		s.SetBytes(vin.Signature[:(sigLen/2)])
+		s.SetBytes(vin.Signature[(sigLen/2):])
 
 		x := big.Int{}
 		y := big.Int{}
